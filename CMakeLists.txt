@@ -98,7 +98,7 @@ target_link_libraries(chronos
 )
 
 # Signal that IO layer is available (consumers can #ifdef on this)
-target_compile_definitions(chronos PUBLIC CHRONOS_HAS_WEBSOCKET)
+target_compile_definitions(chronos PUBLIC CHRONOS_HAS_LIVE_MODE)
 
 target_compile_features(chronos PUBLIC cxx_std_20)
 
