@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 namespace chronos {
@@ -61,7 +62,7 @@ public:
             int64_t diff = static_cast<int64_t>(seq) - static_cast<int64_t>(pos);
             if (diff == 0) {
                 if (head_.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
-                    s.data = val;
+                    std::memcpy(&s.data, &val, sizeof(T));
                     s.seq.store(pos + 1, std::memory_order_release);
                     return true;
                 }
@@ -87,7 +88,7 @@ public:
             int64_t diff = static_cast<int64_t>(seq) - static_cast<int64_t>(pos + 1);
             if (diff == 0) {
                 if (tail_.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
-                    val = s.data;
+                    std::memcpy(&val, &s.data, sizeof(T));
                     s.seq.store(pos + N, std::memory_order_release);
                     return true;
                 }

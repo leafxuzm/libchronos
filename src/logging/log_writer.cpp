@@ -17,7 +17,7 @@ constexpr uint32_t LOG_TYPE_TICK  = 0;
 constexpr uint32_t LOG_TYPE_ORDER = 1;
 constexpr uint32_t LOG_TYPE_FILL  = 2;
 constexpr uint32_t LOG_TYPE_SNAP  = 3;
-constexpr size_t   HEADER_SIZE = 24;
+constexpr size_t   HEADER_SIZE = 64;  // padded to alignas(Tick)=64 for mmap record alignment
 
 std::string todayStr() {
     auto now = std::chrono::system_clock::now();

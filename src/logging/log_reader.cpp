@@ -15,7 +15,7 @@ namespace {
 
 constexpr uint64_t LOG_MAGIC   = 0x01304E4F524843ULL;  // "CHRONOS\x01"
 constexpr uint32_t LOG_VERSION = 1;
-constexpr size_t   HEADER_SIZE = 24;
+constexpr size_t   HEADER_SIZE = 64;  // padded to alignas(Tick)=64 for mmap records
 
 // Record size by log type
 size_t recordSizeForType(uint32_t log_type) {
