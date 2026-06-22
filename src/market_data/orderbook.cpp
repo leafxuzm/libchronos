@@ -1,6 +1,7 @@
 #include <chronos/market_data/orderbook.hpp>
 #include <algorithm>
 #include <chrono>
+#include <mutex>
 
 namespace chronos {
 namespace market_data {
