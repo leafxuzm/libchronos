@@ -281,8 +281,14 @@ TEST(StrategyEngineTest, CancelOrderProducesCancelRequest) {
     EXPECT_TRUE(raw->cancelled);
 
     // Verify the cancel request was enqueued with quantity=0
+    // Spin a few times: on GCC -O3 the engine thread may not have
+    // finished pushing the cancel order by the time we observe cancelled.
     OrderRequest out;
-    bool has_cancel = engine.popOrder(out);
+    bool has_cancel = false;
+    for (int retry = 0; retry < 1000 && !has_cancel; ++retry) {
+        has_cancel = engine.popOrder(out);
+        if (!has_cancel) utils::cpuRelax();
+    }
     EXPECT_TRUE(has_cancel);
     if (has_cancel) {
         EXPECT_EQ(out.order_id, 42ULL);

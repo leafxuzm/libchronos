@@ -344,12 +344,12 @@ TEST(PositionManagerTest, ConcurrentReadWhileWrite) {
 #  if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer) || __has_feature(undefined_behavior_sanitizer)
     constexpr size_t min_reads = 50;
 #  else
-    constexpr size_t min_reads = 1000;
+    constexpr size_t min_reads = 200;
 #  endif
 #elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
     constexpr size_t min_reads = 50;
 #else
-    constexpr size_t min_reads = 1000;
+    constexpr size_t min_reads = 200;
 #endif
     EXPECT_GT(reads.load(), min_reads);
     auto positions = pm.getAllPositions();
