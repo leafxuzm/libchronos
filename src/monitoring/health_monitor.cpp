@@ -1,6 +1,7 @@
 #include "chronos/monitoring/health_monitor.hpp"
 #include <nlohmann/json.hpp>
 #include <chrono>
+#include <mutex>
 
 namespace chronos {
 namespace monitoring {
