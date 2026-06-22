@@ -21,6 +21,17 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native -mtune=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
 
+# ── Dependencies (must come before sanitizer flags) ──────────────
+# chronos_deps provides: fpm, yaml-cpp, gflags, spdlog, nlohmann_json,
+# simdjson, boost_headers, OpenSSL, libzmq — all via FetchContent
+# with system-package fallbacks.
+# Placed BEFORE sanitizer flags so libzmq's try_compile for poll()
+# detection is not polluted by -fsanitize=address.
+add_subdirectory(${CMAKE_SOURCE_DIR}/../libchronos-deps
+                 ${CMAKE_BINARY_DIR}/chronos_deps)
+
+# Sanitizer flags: global so tests/benchmarks also inherit them.
+# Applied AFTER deps so third-party detection is clean.
 if(ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
@@ -33,13 +44,6 @@ if(ENABLE_UBSAN)
     add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=undefined)
 endif()
-
-# ── Dependencies ─────────────────────────────────────────────────
-# chronos_deps provides: fpm, yaml-cpp, gflags, spdlog, nlohmann_json,
-# simdjson, boost_headers, OpenSSL, libzmq — all via FetchContent
-# with system-package fallbacks.
-add_subdirectory(${CMAKE_SOURCE_DIR}/../libchronos-deps
-                 ${CMAKE_BINARY_DIR}/chronos_deps)
 
 # ── Core library sources (always built) ──────────────────────────
 set(CHRONOS_SOURCES
@@ -101,6 +105,12 @@ target_link_libraries(chronos
 target_compile_definitions(chronos PUBLIC CHRONOS_HAS_LIVE_MODE)
 
 target_compile_features(chronos PUBLIC cxx_std_20)
+
+# GCC warns about fpm fixed.hpp constexpr comparisons that are tautological
+# by design (e.g., range checks on fixed-point types).
+target_compile_options(chronos PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-tautological-compare>
+)
 
 # ── Install ──────────────────────────────────────────────────────
 install(TARGETS chronos
