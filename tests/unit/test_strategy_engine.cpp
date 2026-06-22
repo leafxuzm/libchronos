@@ -287,7 +287,7 @@ TEST(StrategyEngineTest, CancelOrderProducesCancelRequest) {
     bool has_cancel = false;
     for (int retry = 0; retry < 1000 && !has_cancel; ++retry) {
         has_cancel = engine.popOrder(out);
-        if (!has_cancel) utils::cpuRelax();
+        if (!has_cancel) std::this_thread::yield();
     }
     EXPECT_TRUE(has_cancel);
     if (has_cancel) {
