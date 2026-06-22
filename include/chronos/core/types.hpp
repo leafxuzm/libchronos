@@ -1,11 +1,22 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <optional>
 #include <chrono>
+
+// GCC: std::is_signed<__int128> incorrectly returns false (known quirk with
+// extended integer types). Specialise it BEFORE fpm includes so its
+// static_assert(is_signed<IntermediateType> == is_signed<BaseType>) passes.
+#ifdef __SIZEOF_INT128__
+namespace std {
+    template<> struct is_signed<__int128> : true_type {};
+}
+#endif
+
 #include <fpm/fixed.hpp>  // Fixed-point math library for precise decimal arithmetic
 
 namespace chronos {

@@ -22,6 +22,8 @@ target_compile_options(chronos_benchmarks PRIVATE
     -DNDEBUG
 )
 
-add_test(NAME chronos_benchmarks COMMAND chronos_benchmarks --benchmark_min_time=0.1)
+# Benchmarks are NOT registered as CTest tests — they take 70-80s with
+# --benchmark_min_time=0.1 (ManualTime + thread setup per iteration).
+# Run them directly instead: ./chronos_benchmarks --benchmark_min_time=0.01
 
 message(STATUS "Benchmark suite configured")

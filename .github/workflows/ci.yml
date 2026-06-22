@@ -97,8 +97,8 @@ jobs:
           cmake .. \
             -DCMAKE_BUILD_TYPE=Debug \
             -DBUILD_TESTS=ON \
-            -DENABLE_ASAN=ON \
-            -DENABLE_UBSAN=ON
+            -DCHRONOS_ENABLE_ASAN=ON \
+            -DCHRONOS_ENABLE_UBSAN=ON
 
       - name: Build
         working-directory: libchronos/build
@@ -137,7 +137,7 @@ jobs:
           cmake .. \
             -DCMAKE_BUILD_TYPE=Debug \
             -DBUILD_TESTS=ON \
-            -DENABLE_TSAN=ON
+            -DCHRONOS_ENABLE_TSAN=ON
 
       - name: Build
         working-directory: libchronos/build

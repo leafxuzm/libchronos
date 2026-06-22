@@ -12,9 +12,9 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 # ── Build options ────────────────────────────────────────────────
 option(BUILD_TESTS "Build test suite" ON)
 option(BUILD_BENCHMARKS "Build performance benchmarks" ON)
-option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
-option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
-option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+option(CHRONOS_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(CHRONOS_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(CHRONOS_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 
 # ── Compiler flags ───────────────────────────────────────────────
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic")
@@ -32,15 +32,15 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/../libchronos-deps
 
 # Sanitizer flags: global so tests/benchmarks also inherit them.
 # Applied AFTER deps so third-party detection is clean.
-if(ENABLE_ASAN)
+if(CHRONOS_ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
 endif()
-if(ENABLE_TSAN)
+if(CHRONOS_ENABLE_TSAN)
     add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
     add_link_options(-fsanitize=thread)
 endif()
-if(ENABLE_UBSAN)
+if(CHRONOS_ENABLE_UBSAN)
     add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=undefined)
 endif()
