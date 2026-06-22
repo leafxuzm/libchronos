@@ -48,6 +48,10 @@ public:
     /// Signal shutdown and join the worker thread.
     void stop();
 
+    /// Pin the engine thread to a specific CPU core (-1 = no affinity).
+    void setCpuAffinity(int cpu) { cpu_affinity_ = cpu; }
+    int cpuAffinity() const { return cpu_affinity_; }
+
     bool isRunning() const { return running_.load(std::memory_order_acquire); }
 
     // --- Strategy management ---
@@ -135,6 +139,7 @@ private:
 
     std::thread         worker_;
     std::atomic<bool>   running_{false};
+    int                 cpu_affinity_{-1};
 
     // --- Statistics ---
 

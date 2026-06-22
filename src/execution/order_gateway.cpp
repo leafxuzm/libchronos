@@ -1,4 +1,5 @@
 #include "chronos/execution/order_gateway.hpp"
+#include "chronos/utils/cpu_affinity.hpp"
 #include <chronos/execution/binance_http_client.hpp>
 #include <chronos/execution/binance_user_stream.hpp>
 #include <spdlog/spdlog.h>
@@ -65,6 +66,10 @@ void OrderGateway::stop() {
 // ============================================================================
 
 void OrderGateway::run() {
+    if (cpu_affinity_ >= 0) {
+        utils::setCpuAffinity(cpu_affinity_);
+    }
+
     while (running_.load(std::memory_order_acquire)) {
         OrderRequest order;
         bool did_work = false;
@@ -76,9 +81,11 @@ void OrderGateway::run() {
         }
 
         if (!did_work) {
-            std::lock_guard<std::mutex> lk(stats_mutex_);
-            stats_.queue_empty_polls++;
-            std::this_thread::yield();
+            {
+                std::lock_guard<std::mutex> lk(stats_mutex_);
+                stats_.queue_empty_polls++;
+            }
+            utils::cpuRelax();
         }
     }
 }

@@ -89,6 +89,10 @@ public:
     void stop();
     bool isRunning() const { return running_.load(std::memory_order_acquire); }
 
+    /// Pin the gateway I/O thread to a specific CPU core (-1 = no affinity).
+    void setCpuAffinity(int cpu) { cpu_affinity_ = cpu; }
+    int cpuAffinity() const { return cpu_affinity_; }
+
     // --- Simulation injection (MVP) ---
 
     void injectFill(const Fill& fill);
@@ -148,6 +152,7 @@ private:
 
     std::thread         io_thread_;
     std::atomic<bool>   running_{false};
+    int                 cpu_affinity_{-1};
 
     // --- Configuration ---
 

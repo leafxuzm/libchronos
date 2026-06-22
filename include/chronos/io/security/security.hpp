@@ -101,15 +101,15 @@ public:
     /// Reset the rate limiter for the current second.
     void resetRateLimit();
 
-    uint64_t accepted_count() const { return accepted_; }
-    uint64_t rejected_count() const { return rejected_; }
+    uint64_t accepted_count() const { return accepted_.load(std::memory_order_relaxed); }
+    uint64_t rejected_count() const { return rejected_.load(std::memory_order_relaxed); }
 
 private:
     Config config_;
-    uint32_t current_second_{0};
-    uint32_t requests_this_second_{0};
-    uint64_t accepted_{0};
-    uint64_t rejected_{0};
+    std::atomic<uint32_t> current_second_{0};
+    std::atomic<uint32_t> requests_this_second_{0};
+    std::atomic<uint64_t> accepted_{0};
+    std::atomic<uint64_t> rejected_{0};
 };
 
 }  // namespace security

@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu Debug
+            os: ubuntu-latest
+            build_type: Debug
+          - name: Ubuntu Release
+            os: ubuntu-latest
+            build_type: Release
+          - name: macOS Release
+            os: macos-latest
+            build_type: Release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: libchronos
+
+      - name: Checkout libchronos-deps
+        uses: actions/checkout@v4
+        with:
+          repository: leafxuzm/libchronos-deps
+          path: libchronos-deps
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential libboost-dev libssl-dev libzmq3-dev pkg-config
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake boost openssl zeromq pkg-config
+
+      - name: Configure
+        working-directory: libchronos
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DBUILD_TESTS=ON \
+            -DBUILD_BENCHMARKS=ON
+
+      - name: Build
+        working-directory: libchronos/build
+        run: make -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
+
+      - name: Run tests
+        working-directory: libchronos/build
+        run: ctest --output-on-failure
+
+      - name: Run benchmarks (smoke)
+        working-directory: libchronos/build
+        run: |
+          if [ -f benchmark/chronos_benchmarks ]; then
+            ./benchmark/chronos_benchmarks --benchmark_min_time=0.01
+          fi
+
+  # Separate sanitizer job — debug only, slower
+  sanitizers:
+    name: Sanitizers (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: libchronos
+
+      - name: Checkout libchronos-deps
+        uses: actions/checkout@v4
+        with:
+          repository: leafxuzm/libchronos-deps
+          path: libchronos-deps
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential libboost-dev libssl-dev libzmq3-dev pkg-config
+
+      - name: Configure (ASan + UBSan)
+        working-directory: libchronos
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DENABLE_ASAN=ON \
+            -DENABLE_UBSAN=ON
+
+      - name: Build
+        working-directory: libchronos/build
+        run: make -j$(nproc)
+
+      - name: Run tests under sanitizers
+        working-directory: libchronos/build
+        run: ctest --output-on-failure
+
+  # Separate TSan job — incompatible with ASan, must be standalone.
+  # TSan detects data races, not memory errors.
+  tsan:
+    name: TSan — Thread Sanitizer (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: libchronos
+
+      - name: Checkout libchronos-deps
+        uses: actions/checkout@v4
+        with:
+          repository: leafxuzm/libchronos-deps
+          path: libchronos-deps
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential libboost-dev libssl-dev libzmq3-dev pkg-config
+
+      - name: Configure (TSan)
+        working-directory: libchronos
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DENABLE_TSAN=ON
+
+      - name: Build
+        working-directory: libchronos/build
+        run: make -j$(nproc)
+
+      - name: Run tests under TSan
+        working-directory: libchronos/build
+        run: ctest --output-on-failure --timeout 120

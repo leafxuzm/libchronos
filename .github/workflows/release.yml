@@ -1,0 +1,74 @@
+name: Release
+
+# Build libchronos.a for all supported platforms when a version tag is pushed.
+# Uploads the pre-built static libraries as GitHub Release assets so trading_engine
+# (and other consumers) can download them without building from source.
+
+on:
+  push:
+    tags:
+      - 'v*'          # v1.0.0, v1.1.0, etc.
+  workflow_dispatch:   # manual trigger from Actions UI
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-latest
+            platform: macos-arm64
+          - name: macOS x86_64
+            os: macos-13        # last Intel macOS runner
+            platform: macos-x86_64
+          - name: Linux x86_64
+            os: ubuntu-latest
+            platform: linux-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: libchronos
+
+      - name: Checkout libchronos-deps
+        uses: actions/checkout@v4
+        with:
+          repository: leafxuzm/libchronos-deps
+          path: libchronos-deps
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential libboost-dev libssl-dev libzmq3-dev pkg-config
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake boost openssl zeromq pkg-config
+
+      - name: Configure (Release)
+        working-directory: libchronos
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_BENCHMARKS=OFF
+
+      - name: Build
+        working-directory: libchronos/build
+        run: make -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4) chronos
+
+      - name: Rename artifact
+        run: |
+          cp libchronos/build/libchronos.a "libchronos-${{ matrix.platform }}.a"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "libchronos-${{ matrix.platform }}.a"
+        # GITHUB_TOKEN is automatically provided — no manual secret needed

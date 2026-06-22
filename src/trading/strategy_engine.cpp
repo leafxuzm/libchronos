@@ -1,4 +1,5 @@
 #include "chronos/trading/strategy_engine.hpp"
+#include "chronos/utils/cpu_affinity.hpp"
 #include <thread>
 
 namespace chronos {
@@ -147,6 +148,10 @@ StrategyEngine::Stats StrategyEngine::getStats() const {
 // ============================================================================
 
 void StrategyEngine::run() {
+    if (cpu_affinity_ >= 0) {
+        utils::setCpuAffinity(cpu_affinity_);
+    }
+
     Tick tick;
     Fill fill;
     uint64_t last_timer_us = 0;
@@ -214,7 +219,7 @@ void StrategyEngine::run() {
                     entry.strategy->onTimer(now_us, ctx_);
                 }
             }
-            std::this_thread::yield();
+            utils::cpuRelax();
         }
     }
 }

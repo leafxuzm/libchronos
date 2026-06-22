@@ -233,32 +233,41 @@ bool constantTimeEquals(const std::string& a, const std::string& b) {
 
 bool TokenValidator::validate(const std::string& token) {
     if (!checkRateLimit()) {
-        rejected_++;
+        rejected_.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
 
     if (!constantTimeEquals(token, config_.valid_token)) {
-        rejected_++;
+        rejected_.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
 
-    accepted_++;
+    accepted_.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
 bool TokenValidator::checkRateLimit() {
     uint32_t now_sec = currentSecond();
-    if (current_second_ != now_sec) {
-        current_second_ = now_sec;
-        requests_this_second_ = 0;
+
+    // On second rollover, reset the per-second counter.
+    // CAS ensures exactly one thread wins the reset; others may see
+    // a stale current_second_ for one iteration, which is harmless
+    // for a rate limiter (approximate counting is acceptable).
+    uint32_t prev_sec = current_second_.load(std::memory_order_relaxed);
+    if (prev_sec != now_sec) {
+        // Try to claim the rollover.  Only the winner resets the counter.
+        if (current_second_.compare_exchange_strong(prev_sec, now_sec,
+                                                    std::memory_order_relaxed)) {
+            requests_this_second_.store(0, std::memory_order_relaxed);
+        }
     }
-    requests_this_second_++;
-    return requests_this_second_ <= config_.max_requests_per_second;
+    uint32_t n = requests_this_second_.fetch_add(1, std::memory_order_relaxed) + 1;
+    return n <= config_.max_requests_per_second;
 }
 
 void TokenValidator::resetRateLimit() {
-    current_second_ = 0;
-    requests_this_second_ = 0;
+    current_second_.store(0, std::memory_order_relaxed);
+    requests_this_second_.store(0, std::memory_order_relaxed);
 }
 
 }  // namespace security
