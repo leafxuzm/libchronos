@@ -148,6 +148,9 @@ private:
     void finalizeOrder(uint64_t order_id);
     const PendingOrder* findPending(uint64_t order_id) const;
 
+    // Cancel all outstanding orders on shutdown
+    void cancelAllPending();
+
     // --- Threading ---
 
     std::thread         io_thread_;

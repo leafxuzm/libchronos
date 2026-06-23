@@ -59,6 +59,7 @@ void OrderGateway::stop() {
     if (io_thread_.joinable()) {
         io_thread_.join();
     }
+    cancelAllPending();
 }
 
 // ============================================================================
@@ -75,7 +76,6 @@ void OrderGateway::run() {
         bool did_work = false;
 
         while (order_queue_->try_pop(order)) {
-            if (!running_.load(std::memory_order_acquire)) break;
             did_work = true;
             processOrder(order);
         }
@@ -87,6 +87,12 @@ void OrderGateway::run() {
             }
             utils::cpuRelax();
         }
+    }
+
+    // Drain remaining queue items after stop signal
+    OrderRequest order;
+    while (order_queue_->try_pop(order)) {
+        processOrder(order);
     }
 }
 
@@ -390,6 +396,54 @@ void OrderGateway::updatePendingStatus(uint64_t order_id, OrderStatus status,
 void OrderGateway::finalizeOrder(uint64_t order_id) {
     // Caller must hold pending_mutex_
     pending_orders_.erase(order_id);
+}
+
+void OrderGateway::cancelAllPending() {
+    std::vector<uint64_t> pending_ids;
+    {
+        std::lock_guard<std::mutex> lk(pending_mutex_);
+        pending_ids.reserve(pending_orders_.size());
+        for (const auto& kv : pending_orders_) {
+            pending_ids.push_back(kv.first);
+        }
+    }
+
+    for (uint64_t id : pending_ids) {
+        // Real path: send cancel request to exchange
+        if (!simulate_fills_ && http_client_) {
+            std::string sym;
+            {
+                std::lock_guard<std::mutex> lk(pending_mutex_);
+                auto it = pending_orders_.find(id);
+                if (it == pending_orders_.end()) continue;
+                sym = symbolIdToName(it->second.symbol_id);
+            }
+            if (!sym.empty()) {
+                bool ok = http_client_->cancelOrder(config_, sym, id);
+                if (ok) {
+                    spdlog::info("Shutdown cancel: order {} on {}", id, sym);
+                }
+            }
+        }
+
+        // Erase from pending (both real and simulated paths)
+        {
+            std::lock_guard<std::mutex> lk(pending_mutex_);
+            auto it = pending_orders_.find(id);
+            if (it != pending_orders_.end()) {
+                it->second.status = OrderStatus::CANCELLED;
+                pending_orders_.erase(it);
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lk(stats_mutex_);
+            stats_.orders_cancelled++;
+        }
+    }
+
+    if (!pending_ids.empty()) {
+        spdlog::info("Shutdown: cancelled {} pending orders", pending_ids.size());
+    }
 }
 
 const PendingOrder* OrderGateway::findPending(uint64_t order_id) const {
