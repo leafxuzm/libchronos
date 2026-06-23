@@ -423,6 +423,9 @@ TEST_F(FullPipelineTest, PriceOscillationTriggersGridTrades) {
 #include <zmq.h>
 
 TEST(IntegrationPipelineTest, ZmqBridgePublishAndReceive) {
+#ifdef CHRONOS_TSAN_ENABLED
+    GTEST_SKIP() << "ZMQ tests skipped under TSan (libzmq internal races trigger false positives)";
+#endif
     cleanDir();
 
     // --- Publisher ---

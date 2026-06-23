@@ -263,11 +263,15 @@ static void BM_E2E_Throughput_Sustained(benchmark::State& state) {
             }
         }
 
-        // Final drain
+        // Final drain — yield to let engine thread flush remaining orders
         auto t_drain_start = std::chrono::high_resolution_clock::now();
         while (drained < pushed) {
             OrderRequest out;
             while (engine.popOrder(out)) drained++;
+            auto drain_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - t_drain_start).count();
+            if (drain_ms > 5000) break;  // 5s timeout prevents infinite spin
+            std::this_thread::yield();
         }
         auto t_end = std::chrono::high_resolution_clock::now();
 

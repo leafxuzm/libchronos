@@ -153,6 +153,9 @@ TEST(ZMQBridgeTest, PublishFillIncrementsCounter) {
 // ============================================================================
 
 TEST(ZMQBridgeTest, SubscriberReceivesTick) {
+#ifdef CHRONOS_TSAN_ENABLED
+    GTEST_SKIP() << "ZMQ tests skipped under TSan (libzmq internal races trigger false positives)";
+#endif
     int port = nextPort();
     ZMQBridge bridge;
     ZMQConfig cfg;
@@ -191,6 +194,9 @@ TEST(ZMQBridgeTest, SubscriberReceivesTick) {
 }
 
 TEST(ZMQBridgeTest, SubscriberReceivesOrder) {
+#ifdef CHRONOS_TSAN_ENABLED
+    GTEST_SKIP() << "ZMQ tests skipped under TSan (libzmq internal races trigger false positives)";
+#endif
     int port = nextPort();
     ZMQBridge bridge;
     ZMQConfig cfg;
@@ -230,6 +236,9 @@ TEST(ZMQBridgeTest, SubscriberReceivesOrder) {
 }
 
 TEST(ZMQBridgeTest, SubscriberReceivesFill) {
+#ifdef CHRONOS_TSAN_ENABLED
+    GTEST_SKIP() << "ZMQ tests skipped under TSan (libzmq internal races trigger false positives)";
+#endif
     int port = nextPort();
     ZMQBridge bridge;
     ZMQConfig cfg;
@@ -273,6 +282,9 @@ TEST(ZMQBridgeTest, SubscriberReceivesFill) {
 // ============================================================================
 
 TEST(ZMQBridgeTest, SubscriberTopicFilter) {
+#ifdef CHRONOS_TSAN_ENABLED
+    GTEST_SKIP() << "ZMQ tests skipped under TSan (libzmq internal races trigger false positives)";
+#endif
     int port = nextPort();
     ZMQBridge bridge;
     ZMQConfig cfg;
