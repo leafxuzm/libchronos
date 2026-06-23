@@ -309,30 +309,36 @@ TEST(PositionManagerTest, LoadFailureReturnsFalse) {
 
 TEST(PositionManagerTest, ConcurrentReadWhileWrite) {
     PositionManager pm;
+    std::atomic<bool> start{false};
     std::atomic<bool> running{true};
     std::atomic<size_t> reads{0};
 
-    // Writer thread
+    // Writer thread — waits for start signal
     std::thread writer([&]() {
+        while (!start.load(std::memory_order_acquire)) {}
         for (int i = 0; i < 1000; ++i) {
             pm.updatePosition(makeBuyFill(
                 static_cast<uint32_t>(1 + i % 3),
                 50000.0 + i * 0.1,
                 1.0));
         }
-        running = false;
+        running.store(false, std::memory_order_release);
     });
 
-    // Reader threads
+    // Reader threads — wait for start signal
     std::vector<std::thread> readers;
     for (int t = 0; t < 3; ++t) {
         readers.emplace_back([&]() {
-            while (running) {
+            while (!start.load(std::memory_order_acquire)) {}
+            while (running.load(std::memory_order_acquire)) {
                 pm.getPosition(1);
                 reads.fetch_add(1, std::memory_order_relaxed);
             }
         });
     }
+
+    // All threads ready — release them simultaneously
+    start.store(true, std::memory_order_release);
 
     writer.join();
     for (auto& t : readers) t.join();
