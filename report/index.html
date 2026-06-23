@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>libchronos — HFT 核心库 项目文档与报告</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --text-dim: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --orange: #d2991d; --red: #f85149; --purple: #bc8cff;
+    --callout-info: #0c2d48; --callout-good: #0d3323;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    line-height: 1.6; color: var(--text); background: var(--bg);
+  }
+  body { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+  h1 { font-size: 2rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; color: #f0f6fc; }
+  h2 { font-size: 1.5rem; margin-top: 2.5rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+  h3 { font-size: 1.15rem; margin-top: 1.5rem; color: #f0f6fc; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  th, td { padding: 0.6rem 0.8rem; text-align: left; border: 1px solid var(--border); }
+  th { background: #21262d; color: #f0f6fc; font-weight: 600; }
+  tr:hover { background: #1c2128; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.9em; background: #1c2128; padding: 0.15em 0.4em; border-radius: 3px; }
+  .callout { padding: 1rem 1.2rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid; }
+  .callout-info { background: var(--callout-info); border-color: var(--accent); }
+  .callout-good { background: var(--callout-good); border-color: var(--green); }
+  .tag { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+  .tag-ok { background: var(--green); color: #000; }
+  .footer { margin-top: 4rem; padding: 1.5rem; text-align: center; color: var(--text-dim); border-top: 1px solid var(--border); font-size: 0.85em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; margin: 0.8rem 0; }
+  .report-card h3 { margin-top: 0; }
+  .report-card .date { color: var(--text-dim); font-size: 0.85em; }
+  .report-card .desc { margin: 0.5rem 0; }
+  .report-card .tags { margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>libchronos — HFT 核心库<br>项目文档与报告</h1>
+
+<p style="color: var(--text-dim);">
+  版本 v1.0.0 · <a href="https://github.com/leafxuzm/libchronos">GitHub</a> ·
+  CI/CD: <a href="https://github.com/leafxuzm/libchronos/actions">Actions</a>
+</p>
+
+<hr>
+
+<h2>报告列表</h2>
+
+<div class="report-card">
+  <h3><a href="ci-cd-experience-2026-06-23.html">CI/CD 跨平台构建经验总结</a></h3>
+  <div class="date">2026-06-23</div>
+  <div class="desc">
+    10 项 CI/CD 问题全记录：GCC vs Clang 编译差异、CMake sanitizer 污染、CI runner 时序问题、
+    Google Benchmark 挂起、TSan libzmq 误报处理。5 矩阵 Job 从全红到全绿的完整修复过程。
+  </div>
+  <div class="tags">
+    <span class="tag tag-ok">CI/CD</span>
+    <span class="tag tag-ok">跨平台</span>
+    <span class="tag tag-ok">GCC</span>
+    <span class="tag tag-ok">TSan</span>
+    <span class="tag tag-ok">CMake</span>
+{#    <span class="tag tag-ok">Benchmark</span>#}
+  </div>
+</div>
+
+<hr>
+
+<h2>项目概况</h2>
+
+<table>
+<tr><th>维度</th><th>值</th></tr>
+<tr><td>语言标准</td><td>C++20</td></tr>
+<tr><td>构建系统</td><td>CMake 3.20+</td></tr>
+<tr><td>产物</td><td>libchronos.a (静态库)</td></tr>
+<tr><td>依赖管理</td><td>libchronos-deps (FetchContent 聚合)</td></tr>
+<tr><td>测试框架</td><td>GTest + RapidCheck (PBT) + Google Benchmark</td></tr>
+<tr><td>测试数量</td><td>368 tests, 46 suites</td></tr>
+<tr><td>CI 矩阵</td><td>5 Jobs (Ubuntu Debug/Release, macOS Release, ASan+UBSan, TSan)</td></tr>
+<tr><td>许可证</td><td>私有 (源码不可见, libchronos.a 供 trading_engine 链接)</td></tr>
+</table>
+
+<h2>架构分层</h2>
+
+<table>
+<tr><th>层级</th><th>模块</th><th>说明</th></tr>
+<tr><td>L0 基础</td><td><code>core/</code></td><td>Decimal (fpm fixed-point), Tick, OrderRequest, Fill, Config, Error</td></tr>
+<tr><td>L1 IO</td><td><code>io/</code></td><td>Transport (WebSocket TLS), Protocol (Binance/OKX JSON), Security (HMAC-SHA256)</td></tr>
+<tr><td>L2 工具</td><td><code>utils/</code></td><td>MPMC Queue (Vyukov 无锁), CPU Affinity</td></tr>
+<tr><td>L3 行情</td><td><code>market_data/</code></td><td>OrderBook V1/V2 (热冷分离), AnyGateway (类型擦除), ExchangeAdapter</td></tr>
+<tr><td>L4 交易</td><td><code>trading/</code> + <code>risk/</code></td><td>StrategyEngine, RiskEngine (5 项检查 <1μs), PositionManager</td></tr>
+<tr><td>L5 执行</td><td><code>execution/</code></td><td>OrderGateway, BinanceHttpClient, BinanceUserStream</td></tr>
+<tr><td>L6 日志</td><td><code>logging/</code></td><td>LogWriter (二进制), LogReader (mmap), ZMQBridge (PUB-SUB)</td></tr>
+<tr><td>L7 回测</td><td><code>backtest/</code></td><td>TimeReplayer, BacktestEngine, Metrics (Sharpe/Sortino/Calmar)</td></tr>
+</table>
+
+<hr>
+
+<h2>关联项目</h2>
+
+<table>
+<tr><th>项目</th><th>关系</th><th>可见性</th></tr>
+<tr><td><a href="https://github.com/leafxuzm/libchronos-deps">libchronos-deps</a></td><td>第三方依赖聚合 (FetchContent)</td><td>公开</td></tr>
+<tr><td><strong>libchronos</strong></td><td>核心库 → libchronos.a</td><td>私有</td></tr>
+<tr><td>trading_engine</td><td>应用层，链接 libchronos.a</td><td>公开 (计划中)</td></tr>
+<tr><td><a href="../../../../../Volumes/MacHD1/devel/Quantification/chronos/report/index.html">Chronos (原始项目)</a></td><td>单一仓库 → 拆分为上述 3 仓库</td><td>私有</td></tr>
+</table>
+
+<hr>
+
+<div class="footer">
+  <p>libchronos — Core library for Chronos HFT Platform</p>
+  <p>← <a href="index.html">libchronos 项目文档入口</a> |
+     交叉参考：<a href="../../../../../Volumes/MacHD1/devel/Quantification/chronos/report/index.html">Chronos 综合评估报告 v2.2</a> |
+     <a href="../../../../../Volumes/MacHD1/devel/Quantification/chronos/report/solution-evolution-tracker.html">ADR Log</a>
+  </p>
+</div>
+
+</body>
+</html>
