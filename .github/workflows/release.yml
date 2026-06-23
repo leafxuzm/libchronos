@@ -10,6 +10,9 @@ on:
       - 'v*'          # v1.0.0, v1.1.0, etc.
   workflow_dispatch:   # manual trigger from Actions UI
 
+permissions:
+  contents: write        # required for softprops/action-gh-release to create release + upload assets
+
 jobs:
   build:
     name: ${{ matrix.name }}
